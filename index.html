@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structure ID: The Macromolecule Sort</title>
+<style>
+  :root{
+    --ink:#1c1c1c; --paper:#ffffff; --line:#333333; --band:#e9e9e9;
+    --good:#1a7a3a; --bad:#a3231f; --accent:#2b4c7e; --soft:#f4f4f4;
+    --carb:#d9d2c5; --lipid:#cfd8dc; --protein:#e6d9c9; --nucleic:#d6d0e3;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fafafa;color:var(--ink);margin:0;padding:0;}
+  #app{max-width:900px;margin:0 auto;padding:18px 16px 60px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  h1{font-size:1.4em;margin:0 0 4px;}
+  h2{font-size:1.15em;margin:0 0 10px;border-bottom:3px solid var(--ink);padding-bottom:4px;}
+  .band{background:var(--band);border:1px solid var(--ink);border-radius:6px;padding:10px 14px;margin:12px 0;}
+  .card-box{border:2px solid var(--ink);border-radius:8px;padding:14px;margin:10px 0;background:var(--paper);}
+  label{display:block;margin:8px 0 3px;font-weight:600;}
+  input[type=text],input[type=email],select{
+    width:100%;padding:8px;font-size:1em;border:1px solid #888;border-radius:5px;
+  }
+  button{
+    background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 18px;
+    font-size:1em;cursor:pointer;margin:6px 6px 6px 0;
+  }
+  button.secondary{background:#666;}
+  button.correct{background:var(--good);}
+  button:disabled{background:#aaa;cursor:not-allowed;}
+  .btnrow{margin-top:14px;}
+  .readbtn{background:#4a4a4a;font-size:.85em;padding:6px 10px;}
+  .stopbtn{background:#8a2b2b;font-size:.85em;padding:6px 10px;display:none;}
+
+  /* sort screen */
+  #trayWrap{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;min-height:80px;}
+  .card{
+    width:150px;min-height:110px;border:2px solid var(--ink);border-radius:8px;background:#fff;
+    padding:6px;cursor:pointer;text-align:center;position:relative;transition:transform .1s;
+  }
+  .card.selected{outline:3px solid var(--accent);transform:translateY(-3px);}
+  .card.placed{opacity:.35;cursor:default;}
+  .card svg{width:100%;height:70px;}
+  .card .lbl{font-size:.78em;font-weight:600;margin-top:2px;}
+  #binsWrap{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:14px 0;}
+  .bin{
+    border:3px dashed var(--ink);border-radius:8px;min-height:120px;padding:8px;cursor:pointer;
+  }
+  .bin h3{margin:0 0 6px;font-size:1em;text-align:center;}
+  .bin.carb{background:var(--carb);}
+  .bin.lipid{background:var(--lipid);}
+  .bin.protein{background:var(--protein);}
+  .bin.nucleic{background:var(--nucleic);}
+  .bin .placedCard{font-size:.75em;background:#fff;border:1px solid #555;border-radius:5px;
+    padding:3px 6px;margin:2px;display:inline-block;}
+  .feedback{font-weight:700;margin:6px 0;min-height:20px;}
+  .feedback.good{color:var(--good);}
+  .feedback.bad{color:var(--bad);}
+  .hint{background:#fff8e0;border:1px solid #cbb35a;border-radius:6px;padding:8px 10px;margin-top:6px;display:none;}
+  .progress{font-size:.9em;color:#444;margin:6px 0;}
+
+  .mc-opt{display:block;border:1px solid #888;border-radius:6px;padding:8px 10px;margin:6px 0;
+    background:#fff;cursor:pointer;}
+  .mc-opt.pick{outline:3px solid var(--accent);}
+  .mc-opt.right{background:#e3f5e6;border-color:var(--good);}
+  .mc-opt.wrong{background:#fbe6e5;border-color:var(--bad);}
+
+  table.gradetbl{border-collapse:collapse;width:100%;margin:10px 0;}
+  table.gradetbl th, table.gradetbl td{border:1px solid #999;padding:6px 8px;font-size:.92em;}
+  table.gradetbl th{background:var(--band);}
+
+  .wordbank{background:var(--soft);border:1px solid #999;border-radius:6px;padding:8px 10px;
+    font-size:.9em;margin:8px 0;}
+  .goingfurther{border:2px solid var(--accent);border-radius:8px;padding:12px;margin-top:16px;background:#eef2f8;}
+  .vocab{text-decoration:underline dotted;cursor:help;color:var(--accent);}
+  #vocabPop{position:fixed;bottom:10px;left:10px;right:10px;background:#222;color:#fff;padding:10px 14px;
+    border-radius:8px;display:none;z-index:50;font-size:.9em;}
+  .lockedmsg{color:#a3231f;font-weight:600;}
+  .finalcode{font-size:1.6em;font-weight:800;letter-spacing:1px;background:#fff;border:3px solid var(--ink);
+    border-radius:8px;padding:10px;text-align:center;margin:14px 0;}
+  .scoretbl td:first-child{font-weight:600;}
+</style>
+</head>
+<body>
+<div id="vocabPop"></div>
+<div id="app">
+
+  <!-- SCREEN 0: SIGN IN -->
+  <div class="screen active" id="s-signin">
+    <h1>Structure ID: The Macromolecule Sort</h1>
+    <div class="band">No labels this time. You'll sort 14 molecule structures into the correct macromolecule
+      family using only what the structure looks like &mdash; then prove you know the clues.</div>
+    <div class="card-box">
+      <label for="fName">First name and last initial</label>
+      <input type="text" id="fName" placeholder="e.g., Jordan M.">
+      <label for="fHour">Hour</label>
+      <select id="fHour">
+        <option value="">Select your hour</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option>
+        <option>5</option><option>6</option><option>7</option>
+      </select>
+    </div>
+    <div class="btnrow">
+      <button onclick="goTo('s-intro')" id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: INTRO -->
+  <div class="screen" id="s-intro">
+    <h2>Before you sort</h2>
+    <button class="readbtn" onclick="readScreen('s-intro')">🔊 Read to me</button>
+    <button class="stopbtn" onclick="stopReading()">⏹ Stop</button>
+    <p class="tts">You are about to see 14 monomer structures &mdash; the individual building blocks that
+      link together to form each macromolecule. None of them are labeled with a name. Your job is to
+      look at the shape of each monomer and decide which macromolecule family it builds: carbohydrate,
+      lipid, protein, or nucleic acid. Remember: the monomer is one building block. The macromolecule
+      (polymer) is the long chain built from many of them.</p>
+    <div class="wordbank">
+      <strong>Structural clues word bank:</strong>
+      <span class="vocab" onclick="showVocab('straight chain','A long straight line of carbon atoms bonded in a row. Lipids look like this.')">straight chain</span> &middot;
+      <span class="vocab" onclick="showVocab('ring shape','A closed loop of atoms, usually 5 or 6-sided. Carbohydrates look like this.')">ring shape</span> &middot;
+      <span class="vocab" onclick="showVocab('central carbon with 4 groups','One carbon atom in the middle attached to an amine group, an acid group, a hydrogen, and one changing group (R-group). Proteins look like this.')">central carbon with 4 groups</span> &middot;
+      <span class="vocab" onclick="showVocab('sugar-phosphate-base','A three-part unit: a phosphate group, a ring-shaped sugar, and a nitrogen-containing base attached to the sugar. Nucleic acids look like this.')">sugar-phosphate-base unit</span>
+    </div>
+    <p class="tts">Tap a structure to select it. Then tap the bin you think it belongs in. If you're right,
+      it locks in. If you're wrong, it bounces back and you can try again. After two misses on the same
+      card, a hint will appear.</p>
+    <div class="btnrow">
+      <button class="secondary" onclick="goTo('s-signin')">Back</button>
+      <button onclick="goTo('s-sort')">Begin the sort</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: SORT CHECKPOINT -->
+  <div class="screen" id="s-sort">
+    <h2>Checkpoint 1: Sort by structure</h2>
+    <button class="readbtn" onclick="readScreen('s-sort')">🔊 Read to me</button>
+    <button class="stopbtn" onclick="stopReading()">⏹ Stop</button>
+    <p class="tts">Tap a card, then tap the bin for the family that monomer builds. Place all 14 correctly to unlock the next checkpoint.</p>
+    <div class="progress" id="sortProgress">Placed: 0 / 14</div>
+    <div id="trayWrap"></div>
+    <div id="binsWrap">
+      <div class="bin carb" data-bin="carb" onclick="tryPlace('carb')"><h3>Carbohydrate<br>monomers</h3><div class="binContents"></div></div>
+      <div class="bin lipid" data-bin="lipid" onclick="tryPlace('lipid')"><h3>Lipid<br>monomers</h3><div class="binContents"></div></div>
+      <div class="bin protein" data-bin="protein" onclick="tryPlace('protein')"><h3>Protein<br>monomers</h3><div class="binContents"></div></div>
+      <div class="bin nucleic" data-bin="nucleic" onclick="tryPlace('nucleic')"><h3>Nucleic acid<br>monomers</h3><div class="binContents"></div></div>
+    </div>
+    <div class="feedback" id="sortFeedback"></div>
+    <div class="hint" id="sortHint"></div>
+    <div class="btnrow">
+      <button id="sortNextBtn" disabled onclick="goTo('s-clues')">Next: What's the clue?</button>
+      <span class="lockedmsg" id="sortLockedMsg">Place all 14 structures correctly to continue.</span>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: CLUES CHECKPOINT -->
+  <div class="screen" id="s-clues">
+    <h2>Checkpoint 2: What's the clue?</h2>
+    <button class="readbtn" onclick="readScreen('s-clues')">🔊 Read to me</button>
+    <button class="stopbtn" onclick="stopReading()">⏹ Stop</button>
+    <p class="tts">For each family, choose the structural feature that tipped you off &mdash; not the function, the shape.</p>
+    <div id="cluesWrap"></div>
+    <div class="btnrow">
+      <button id="cluesNextBtn" disabled onclick="goTo('s-monomer')">Next: Monomer &amp; function</button>
+      <span class="lockedmsg" id="cluesLockedMsg">Answer all 4 correctly to continue.</span>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: MONOMER/FUNCTION -->
+  <div class="screen" id="s-monomer">
+    <h2>Checkpoint 3: Monomer &amp; function</h2>
+    <button class="readbtn" onclick="readScreen('s-monomer')">🔊 Read to me</button>
+    <button class="stopbtn" onclick="stopReading()">⏹ Stop</button>
+    <p class="tts">Now that you can identify each family by structure, fill in its monomer and its job in the body.</p>
+    <table class="gradetbl" id="monomerTbl"></table>
+    <div class="wordbank">
+      <strong>Word bank (monomers):</strong> monosaccharide, fatty acid + glycerol, amino acid, nucleotide<br>
+      <strong>Word bank (functions):</strong> quick/stored energy &amp; structure, long-term energy storage &amp; insulation, growth &amp; repair of tissue, stores &amp; carries genetic information
+    </div>
+    <div class="feedback" id="monomerFeedback"></div>
+    <div class="btnrow">
+      <button onclick="checkMonomer()">Check my answers</button>
+      <button id="monomerNextBtn" disabled onclick="goTo('s-elements')">Next: Elements</button>
+      <span class="lockedmsg" id="monomerLockedMsg">Get all 8 correct to continue.</span>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: ELEMENTS -->
+  <div class="screen" id="s-elements">
+    <h2>Checkpoint 4: Elements &amp; carbon</h2>
+    <button class="readbtn" onclick="readScreen('s-elements')">🔊 Read to me</button>
+    <button class="stopbtn" onclick="stopReading()">⏹ Stop</button>
+    <p class="tts">Here are the structures you just sorted, grouped by family. Look at the actual atom letters
+      drawn in each one, then check every element you can find.</p>
+    <div id="elementsWrap"></div>
+    <label for="carbonBonds">Carbon can form how many bonds?</label>
+    <select id="carbonBonds"><option value="">choose</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+    <div class="feedback" id="elementsFeedback"></div>
+    <div class="btnrow">
+      <button onclick="checkElements()">Check my answers</button>
+      <button id="elementsNextBtn" disabled onclick="goTo('s-going')">Next: Going Further</button>
+      <span class="lockedmsg" id="elementsLockedMsg">Get everything correct to continue.</span>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: GOING FURTHER (gifted extension, ungated) -->
+  <div class="screen" id="s-going">
+    <div class="goingfurther">
+      <h2 style="border:none;">Going Further (optional challenge)</h2>
+      <p>Look back at the two lipid structures. One has a kink in its chain. Which one is <em>unsaturated</em>,
+        and what does the kink represent chemically?</p>
+      <textarea id="goingAnswer" rows="4" style="width:100%;padding:8px;font-size:.95em;"
+        placeholder="Type your answer, then reveal the sample response to self-check."></textarea>
+      <div class="btnrow">
+        <button onclick="revealGoing()">Reveal sample answer</button>
+      </div>
+      <div class="band" id="goingReveal" style="display:none;">
+        <strong>Sample answer:</strong> The kinked chain is unsaturated &mdash; the kink represents a carbon-carbon
+        double bond, which removes a pair of hydrogens and bends the chain. The straight chain is saturated,
+        meaning every carbon is bonded to as many hydrogens as possible.
+        <br><br>
+        <label><input type="checkbox" id="goingSelfCheck"> I identified the unsaturated chain and explained what the kink represents.</label>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button onclick="goTo('s-final')">Finish &amp; see my results</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 7: FINAL -->
+  <div class="screen" id="s-final">
+    <h2>Results</h2>
+    <table class="gradetbl scoretbl" id="finalTbl"></table>
+    <div class="finalcode" id="finalCode"></div>
+    <div class="band">Show this screen to your teacher, or write down your code above &mdash; that's all you need to do. Nothing more to submit.</div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- SVG structure drawing helpers ---------- */
+function svgOpen(vb){ return `<svg viewBox="0 0 ${vb} 90" xmlns="http://www.w3.org/2000/svg">`; }
+
+function drawChain(kinked){
+  var n = 8, x0=8, y=45, dx=15, pts=[], s='';
+  for(var i=0;i<n;i++){
+    var yy = y;
+    if(kinked && i===4) yy = y-14; // single upward kink at the double bond, chain stays straight otherwise
+    pts.push([x0+i*dx, yy]);
+  }
+  s += svgOpen(140);
+  s += `<circle cx="6" cy="20" r="7" fill="none" stroke="#333" stroke-width="1.5"/><text x="6" y="24" font-size="9" text-anchor="middle">O</text>`;
+  s += `<text x="16" y="14" font-size="8">HO</text>`;
+  s += `<line x1="8" y1="20" x2="${pts[0][0]}" y2="${pts[0][1]}" stroke="#333"/>`;
+  for(var i=0;i<pts.length-1;i++){
+    s += `<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${pts[i+1][0]}" y2="${pts[i+1][1]}" stroke="#333" stroke-width="${(kinked && i===3)?3:1.5}"/>`;
+  }
+  pts.forEach(function(p,i){
+    s += `<text x="${p[0]}" y="${p[1]+3}" font-size="8" text-anchor="middle">C</text>`;
+    if(!(kinked && (i===3||i===4))){
+      s += `<text x="${p[0]}" y="${p[1]-9}" font-size="7" text-anchor="middle">H</text>`;
+      s += `<text x="${p[0]}" y="${p[1]+15}" font-size="7" text-anchor="middle">H</text>`;
+    }
+  });
+  s += '</svg>';
+  return s;
+}
+
+function drawAmino(rLabel){
+  var s = svgOpen(140);
+  var cx=70, cy=45;
+  s += `<text x="${cx-30}" y="${cy-18}" font-size="9" text-anchor="middle">H3N+</text>`;
+  s += `<line x1="${cx-18}" y1="${cy-14}" x2="${cx-4}" y2="${cy-4}" stroke="#333"/>`;
+  s += `<text x="${cx}" y="${cy+3}" font-size="10" text-anchor="middle" font-weight="700">C</text>`;
+  s += `<text x="${cx+30}" y="${cy-18}" font-size="9" text-anchor="middle">COO-</text>`;
+  s += `<line x1="${cx+8}" y1="${cy-6}" x2="${cx+20}" y2="${cy-14}" stroke="#333"/>`;
+  s += `<text x="${cx}" y="${cy+24}" font-size="9" text-anchor="middle">H</text>`;
+  s += `<line x1="${cx}" y1="${cy+6}" x2="${cx}" y2="${cy+16}" stroke="#333"/>`;
+  s += `<line x1="${cx}" y1="${cy+2}" x2="${cx}" y2="${cy-30}" stroke="#333"/>`;
+  s += `<rect x="${cx-20}" y="${cy+28}" width="40" height="16" rx="3" fill="#f2e6c9" stroke="#888"/>`;
+  s += `<text x="${cx}" y="${cy+39}" font-size="8" text-anchor="middle">${rLabel}</text>`;
+  s += `<line x1="${cx}" y1="${cy+6}" x2="${cx}" y2="${cy+28}" stroke="#333"/>`;
+  s += '</svg>';
+  return s;
+}
+
+function drawRing(sides, extra){
+  var s = svgOpen(140);
+  var cx=70, cy=45, r=26, pts=[];
+  for(var i=0;i<sides;i++){
+    var ang = Math.PI*2*i/sides - Math.PI/2;
+    pts.push([cx+r*Math.cos(ang), cy+r*Math.sin(ang)]);
+  }
+  var path = pts.map(function(p){return p[0]+','+p[1];}).join(' ');
+  s += `<polygon points="${path}" fill="none" stroke="#333" stroke-width="1.5"/>`;
+  pts.forEach(function(p,i){
+    if(i%2===0){
+      var ang = Math.atan2(p[1]-cy,p[0]-cx);
+      var ox = p[0]+14*Math.cos(ang), oy = p[1]+14*Math.sin(ang);
+      s += `<line x1="${p[0]}" y1="${p[1]}" x2="${ox}" y2="${oy}" stroke="#333"/>`;
+      s += `<text x="${ox}" y="${oy}" font-size="7" text-anchor="middle">OH</text>`;
+    }
+  });
+  s += `<text x="${cx}" y="${cy-30}" font-size="8" text-anchor="middle">CH2OH</text>`;
+  s += `<line x1="${cx}" y1="${cy-26}" x2="${pts[0][0]}" y2="${pts[0][1]}" stroke="#333"/>`;
+  s += '</svg>';
+  return s;
+}
+
+function drawNucleotide(){
+  var s = svgOpen(150);
+  // phosphate
+  s += `<circle cx="14" cy="45" r="9" fill="#eee" stroke="#333"/><text x="14" y="48" font-size="8" text-anchor="middle">P</text>`;
+  s += `<line x1="23" y1="45" x2="40" y2="45" stroke="#333"/>`;
+  // sugar (pentagon)
+  var cx=52, cy=45, r=14, pts=[];
+  for(var i=0;i<5;i++){var ang=Math.PI*2*i/5-Math.PI/2; pts.push([cx+r*Math.cos(ang),cy+r*Math.sin(ang)]);}
+  s += `<polygon points="${pts.map(function(p){return p[0]+','+p[1];}).join(' ')}" fill="#fff" stroke="#333"/>`;
+  s += `<text x="${pts[0][0]}" y="${pts[0][1]-3}" font-size="7" text-anchor="middle">O</text>`;
+  s += `<text x="${pts[3][0]}" y="${pts[3][1]+9}" font-size="7" text-anchor="middle">C</text>`;
+  // base attach (single ring, matches how this is taught at this level)
+  s += `<line x1="${pts[1][0]}" y1="${pts[1][1]}" x2="${pts[1][0]+22}" y2="${pts[1][1]-6}" stroke="#333"/>`;
+  var bx = pts[1][0]+34, by = pts[1][1]-6, br=14;
+  var bpts=[];
+  for(var i=0;i<6;i++){var ang=Math.PI*2*i/6; bpts.push([bx+br*Math.cos(ang), by+br*Math.sin(ang)]);}
+  s += `<polygon points="${bpts.map(function(p){return p[0]+','+p[1];}).join(' ')}" fill="#fff" stroke="#333"/>`;
+  s += `<text x="${bx}" y="${by+3}" font-size="7" text-anchor="middle">N</text>`;
+  s += '</svg>';
+  return s;
+}
+
+/* ---------- Shuffle helper ---------- */
+function shuffled(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var tmp=a[i]; a[i]=a[j]; a[j]=tmp;
+  }
+  return a;
+}
+
+/* ---------- Card data ---------- */
+var CARDS = [
+  {id:'lp1', cat:'lipid', name:'Structure A', svg:drawChain(false), hint:'Count the atoms in the chain and look for H\'s on every carbon &mdash; no bends means saturated.'},
+  {id:'lp2', cat:'lipid', name:'Structure B', svg:drawChain(true), hint:'See the flat spot in the middle where two H\'s are missing? That kink is a clue.'},
+  {id:'pr1', cat:'protein', name:'Structure C', svg:drawAmino('H'), hint:'Find the one central carbon with four different things attached to it.'},
+  {id:'pr2', cat:'protein', name:'Structure D', svg:drawAmino('CH3'), hint:'Same central-carbon backbone as the others, just a different side group.'},
+  {id:'pr3', cat:'protein', name:'Structure E', svg:drawAmino('CH2-SH'), hint:'Still one central carbon with an amine group and an acid group attached.'},
+  {id:'pr4', cat:'protein', name:'Structure F', svg:drawAmino('CH2-OH'), hint:'Look for NH3+ and COO- on the same central carbon.'},
+  {id:'cb1', cat:'carb', name:'Structure G', svg:drawRing(6), hint:'This is a closed ring shape with several OH groups hanging off it.'},
+  {id:'cb2', cat:'carb', name:'Structure H', svg:drawRing(5), hint:'Still a ring &mdash; this one just has 5 sides instead of 6.'},
+  {id:'cb3', cat:'carb', name:'Structure I', svg:drawRing(6), hint:'Ring shape again, with OH groups pointing outward.'},
+  {id:'cb4', cat:'carb', name:'Structure J', svg:drawRing(6), hint:'Same ring pattern as the other carbohydrate structures.'},
+  {id:'nc1', cat:'nucleic', name:'Structure K', svg:drawNucleotide(), hint:'Look for three parts in a row: a phosphate, a small ring (sugar), then a base.'},
+  {id:'nc2', cat:'nucleic', name:'Structure L', svg:drawNucleotide(), hint:'Same three-part pattern &mdash; phosphate, sugar ring, base.'},
+  {id:'nc3', cat:'nucleic', name:'Structure M', svg:drawNucleotide(), hint:'Still phosphate + sugar ring + base &mdash; that three-part combo is always nucleic acid.'},
+  {id:'nc4', cat:'nucleic', name:'Structure N', svg:drawNucleotide(), hint:'Phosphate-sugar-base again &mdash; that three-part combo is always nucleic acid.'}
+];
+var BIN_NAMES = {carb:'the carbohydrate monomers', lipid:'the lipid monomers', protein:'the protein monomers', nucleic:'the nucleic acid monomers'};
+var FAMILY_NAMES = {carb:'Carbohydrate', lipid:'Lipid', protein:'Protein', nucleic:'Nucleic Acid'};
+
+// Re-randomize which letter names which structure every time the app loads,
+// so "Structure A" isn't always the same molecule across students/classes/years.
+(function relabelCards(){
+  var letters = shuffled(['A','B','C','D','E','F','G','H','I','J','K','L','M','N']);
+  CARDS.forEach(function(c,i){ c.name = 'Structure ' + letters[i]; });
+})();
+// Independent shuffle of tray layout order, so structures aren't grouped in a
+// fixed block by family (was always lipids-first, then proteins, etc.).
+var TRAY_ORDER = shuffled(CARDS.map(function(c){ return c.id; }));
+
+var state = {
+  selected:null,
+  placed:{}, // id -> true when correctly placed
+  misses:{}, // id -> count
+  sortFirstTry:0,
+  cluesCorrect:0,
+  monomerCorrect:0,
+  elementsCorrect:0,
+  goingDone:false
+};
+
+/* ---------- Navigation ---------- */
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(function(el){el.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  stopReading();
+  if(id==='s-sort') renderSort();
+  if(id==='s-clues') renderClues();
+  if(id==='s-monomer') renderMonomer();
+  if(id==='s-elements') renderElements();
+  if(id==='s-final') renderFinal();
+}
+
+/* ---------- Checkpoint 1: sort ---------- */
+function renderSort(){
+  var tray = document.getElementById('trayWrap');
+  tray.innerHTML='';
+  TRAY_ORDER.forEach(function(id){
+    var c = CARDS.find(function(cc){ return cc.id===id; });
+    if(state.placed[c.id]) return;
+    var div = document.createElement('div');
+    div.className='card'+(state.selected===c.id?' selected':'');
+    div.id='card-'+c.id;
+    div.onclick=function(){ selectCard(c.id); };
+    div.innerHTML = c.svg + '<div class="lbl">'+c.name+'</div>';
+    tray.appendChild(div);
+  });
+  document.querySelectorAll('.bin').forEach(function(b){
+    var cat = b.dataset.bin;
+    var placedHere = CARDS.filter(function(c){return c.cat===cat && state.placed[c.id];});
+    b.querySelector('.binContents').innerHTML = placedHere.map(function(c){return '<span class="placedCard">'+c.name+'</span>';}).join('');
+  });
+  var count = Object.keys(state.placed).length;
+  document.getElementById('sortProgress').textContent = 'Placed: '+count+' / 14';
+  if(count===14){
+    document.getElementById('sortNextBtn').disabled=false;
+    document.getElementById('sortLockedMsg').style.display='none';
+  }
+}
+function selectCard(id){
+  state.selected = id;
+  renderSort();
+}
+function tryPlace(bin){
+  if(!state.selected) return;
+  var card = CARDS.find(function(c){return c.id===state.selected;});
+  var fb = document.getElementById('sortFeedback');
+  var hintBox = document.getElementById('sortHint');
+  if(card.cat===bin){
+    state.placed[card.id]=true;
+    if(!state.misses[card.id]) state.sortFirstTry++;
+    fb.textContent = card.name+' correctly placed with '+BIN_NAMES[bin]+'.';
+    fb.className='feedback good';
+    hintBox.style.display='none';
+    state.selected=null;
+  } else {
+    state.misses[card.id]=(state.misses[card.id]||0)+1;
+    fb.textContent = 'Not quite \u2014 look again at the shape of '+card.name+'.';
+    fb.className='feedback bad';
+    if(state.misses[card.id]>=2){
+      hintBox.style.display='block';
+      hintBox.innerHTML = '<strong>Hint:</strong> '+card.hint;
+    }
+  }
+  renderSort();
+}
+
+/* ---------- Checkpoint 2: clues ---------- */
+var CLUE_Q = [
+  {cat:'lipid', q:'What structural clue identifies a LIPID?',
+    opts:['A long straight chain of carbons and hydrogens, sometimes with a kink','A closed ring with several OH groups','One central carbon with four attached groups','A phosphate-sugar-base three-part unit'], right:0},
+  {cat:'protein', q:'What structural clue identifies a PROTEIN?',
+    opts:['A closed ring shape','A long straight carbon chain','One central carbon bonded to an amine group, an acid group, a hydrogen, and a changing R-group','A phosphate-sugar-base three-part unit'], right:2},
+  {cat:'carb', q:'What structural clue identifies a CARBOHYDRATE?',
+    opts:['A phosphate group attached to a ring','A closed 5- or 6-sided ring with OH groups around it','A central carbon with an R-group','A long chain ending in COOH'], right:1},
+  {cat:'nucleic', q:'What structural clue identifies a NUCLEIC ACID?',
+    opts:['A ring with only OH groups','A straight carbon chain','One central carbon with 4 groups','A phosphate group + a sugar ring + a nitrogen base, all three connected'], right:3}
+];
+function renderClues(){
+  var wrap = document.getElementById('cluesWrap');
+  wrap.innerHTML='';
+  CLUE_Q.forEach(function(item,qi){
+    var box = document.createElement('div');
+    box.className='card-box';
+    var pairs = shuffled(item.opts.map(function(o,oi){ return {text:o, right:(oi===item.right)}; }));
+    item._shuffled = pairs; // remember this question's shuffled order for grading
+    var optsHtml = pairs.map(function(p,oi){
+      return '<div class="mc-opt" id="clue-'+qi+'-'+oi+'" onclick="pickClue('+qi+','+oi+')">'+p.text+'</div>';
+    }).join('');
+    var famCards = CARDS.filter(function(c){ return c.cat===item.cat; });
+    var example = famCards[Math.floor(Math.random()*famCards.length)];
+    var exampleHtml = '<div style="width:108px;flex-shrink:0;border:1px solid #999;border-radius:6px;padding:4px;background:#fff;text-align:center;">'+
+      example.svg+'<div style="font-size:.65em;">Example: '+example.name+'</div></div>';
+    box.innerHTML = '<strong>'+item.q+'</strong>'+
+      '<div style="display:flex;gap:12px;align-items:flex-start;margin-top:6px;">'+
+        exampleHtml+
+        '<div style="flex:1;">'+optsHtml+'</div>'+
+      '</div>';
+    wrap.appendChild(box);
+  });
+}
+var clueAnswered = {};
+function pickClue(qi,oi){
+  var item = CLUE_Q[qi];
+  var pairs = item._shuffled;
+  for(var i=0;i<pairs.length;i++){
+    var el = document.getElementById('clue-'+qi+'-'+i);
+    el.classList.remove('pick','right','wrong');
+  }
+  var chosen = document.getElementById('clue-'+qi+'-'+oi);
+  if(pairs[oi].right){
+    chosen.classList.add('right');
+    if(!clueAnswered[qi]){ clueAnswered[qi]=true; state.cluesCorrect++; }
+  } else {
+    chosen.classList.add('wrong');
+  }
+  var doneCount = Object.keys(clueAnswered).length;
+  if(doneCount===4){
+    document.getElementById('cluesNextBtn').disabled=false;
+    document.getElementById('cluesLockedMsg').style.display='none';
+  }
+}
+
+/* ---------- Checkpoint 3: monomer & function ---------- */
+var MONOMER_ROWS = [
+  {fam:'Carbohydrate', monomer:'monosaccharide', fn:'quick/stored energy & structure'},
+  {fam:'Lipid', monomer:'fatty acid + glycerol', fn:'long-term energy storage & insulation'},
+  {fam:'Protein', monomer:'amino acid', fn:'growth & repair of tissue'},
+  {fam:'Nucleic Acid', monomer:'nucleotide', fn:'stores & carries genetic information'}
+];
+var MONOMER_OPTS = ['monosaccharide','fatty acid + glycerol','amino acid','nucleotide'];
+var FN_OPTS = ['quick/stored energy & structure','long-term energy storage & insulation','growth & repair of tissue','stores & carries genetic information'];
+function renderMonomer(){
+  var tbl = document.getElementById('monomerTbl');
+  var html = '<tr><th>Family</th><th>Monomer</th><th>Function</th></tr>';
+  MONOMER_ROWS.forEach(function(r,i){
+    var monoChoices = shuffled(MONOMER_OPTS);
+    var fnChoices = shuffled(FN_OPTS);
+    html += '<tr><td>'+r.fam+'</td>';
+    html += '<td><select id="mono-'+i+'"><option value="">choose</option>'+monoChoices.map(function(o){return '<option>'+o+'</option>';}).join('')+'</select></td>';
+    html += '<td><select id="fn-'+i+'"><option value="">choose</option>'+fnChoices.map(function(o){return '<option>'+o+'</option>';}).join('')+'</select></td></tr>';
+  });
+  tbl.innerHTML = html;
+  document.getElementById('monomerFeedback').textContent='';
+}
+function checkMonomer(){
+  var correct=0;
+  MONOMER_ROWS.forEach(function(r,i){
+    var m = document.getElementById('mono-'+i).value;
+    var f = document.getElementById('fn-'+i).value;
+    if(m===r.monomer) correct++;
+    if(f===r.fn) correct++;
+  });
+  state.monomerCorrect = correct;
+  var fb = document.getElementById('monomerFeedback');
+  fb.textContent = correct+' / 8 correct.';
+  fb.className = 'feedback '+(correct===8?'good':'bad');
+  if(correct===8){
+    document.getElementById('monomerNextBtn').disabled=false;
+    document.getElementById('monomerLockedMsg').style.display='none';
+  }
+}
+
+/* ---------- Checkpoint 4: elements ---------- */
+var ELEM_ROWS = [
+  {fam:'Carbohydrate', elems:['C','H','O']},
+  {fam:'Lipid', elems:['C','H','O']},
+  {fam:'Protein', elems:['C','H','O','N','S']},
+  {fam:'Nucleic Acid', elems:['C','H','O','N','P']}
+];
+var ALL_ELEMS = ['C','H','O','N','P','S'];
+var CAT_BY_FAM = {'Carbohydrate':'carb','Lipid':'lipid','Protein':'protein','Nucleic Acid':'nucleic'};
+function renderElements(){
+  var wrap = document.getElementById('elementsWrap');
+  wrap.innerHTML='';
+  ELEM_ROWS.forEach(function(r,i){
+    var box = document.createElement('div');
+    box.className='card-box';
+    var cat = CAT_BY_FAM[r.fam];
+    var famCards = CARDS.filter(function(c){return c.cat===cat;});
+    var gallery = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;">'+
+      famCards.map(function(c){
+        return '<div style="width:100px;border:1px solid #999;border-radius:5px;padding:3px;background:#fff;">'+
+          c.svg+'<div style="font-size:.65em;text-align:center;">'+c.name+'</div></div>';
+      }).join('')+'</div>';
+    var boxes = ALL_ELEMS.map(function(e){
+      return '<label style="display:inline-block;width:70px;font-weight:400;"><input type="checkbox" id="el-'+i+'-'+e+'"> '+e+'</label>';
+    }).join('');
+    box.innerHTML = '<strong>'+r.fam+' monomers</strong>'+gallery+boxes;
+    wrap.appendChild(box);
+  });
+  document.getElementById('elementsFeedback').textContent='';
+}
+function checkElements(){
+  var correct = 0, total = ELEM_ROWS.length + 1;
+  ELEM_ROWS.forEach(function(r,i){
+    var ok = true;
+    ALL_ELEMS.forEach(function(e){
+      var checked = document.getElementById('el-'+i+'-'+e).checked;
+      var shouldBe = r.elems.indexOf(e)>=0;
+      if(checked!==shouldBe) ok=false;
+    });
+    if(ok) correct++;
+  });
+  var bondsOk = document.getElementById('carbonBonds').value==='4';
+  if(bondsOk) correct++;
+  state.elementsCorrect = correct;
+  var fb = document.getElementById('elementsFeedback');
+  fb.textContent = correct+' / '+total+' correct.';
+  fb.className = 'feedback '+(correct===total?'good':'bad');
+  if(correct===total){
+    document.getElementById('elementsNextBtn').disabled=false;
+    document.getElementById('elementsLockedMsg').style.display='none';
+  }
+}
+
+/* ---------- Going further ---------- */
+function revealGoing(){
+  document.getElementById('goingReveal').style.display='block';
+}
+
+/* ---------- Final ---------- */
+function renderFinal(){
+  state.goingDone = document.getElementById('goingSelfCheck') && document.getElementById('goingSelfCheck').checked;
+  var tbl = document.getElementById('finalTbl');
+  tbl.innerHTML =
+    '<tr><td>Sort &mdash; first-try correct</td><td>'+state.sortFirstTry+' / 14</td></tr>'+
+    '<tr><td>Structure clues</td><td>'+state.cluesCorrect+' / 4</td></tr>'+
+    '<tr><td>Monomer &amp; function</td><td>'+state.monomerCorrect+' / 8</td></tr>'+
+    '<tr><td>Elements &amp; carbon</td><td>'+state.elementsCorrect+' / 5</td></tr>'+
+    '<tr><td>Going Further</td><td>'+(state.goingDone?'Completed':'Not completed')+'</td></tr>';
+  var name = (document.getElementById('fName').value||'STU').replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,3) || 'STU';
+  var total = state.sortFirstTry + state.cluesCorrect + state.monomerCorrect + state.elementsCorrect;
+  document.getElementById('finalCode').textContent = 'STRUCT-'+name+'-'+total;
+}
+
+/* ---------- Read to me (sentence-by-sentence, preload voices, visible stop) ---------- */
+var voicesReady=false, speaking=false;
+function loadVoices(){ window.speechSynthesis.getVoices(); voicesReady=true; }
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+function readScreen(screenId){
+  if(!('speechSynthesis' in window)){ alert('Read-aloud is not supported in this browser.'); return; }
+  stopReading();
+  var el = document.getElementById(screenId);
+  var text = Array.prototype.map.call(el.querySelectorAll('.tts, h2, strong'), function(n){return n.textContent;}).join('. ');
+  var sentences = text.split(/(?<=[.?!])\s+/).filter(Boolean);
+  var btn = el.querySelector('.stopbtn');
+  if(btn) btn.style.display='inline-block';
+  speaking = true;
+  var i=0;
+  function speakNext(){
+    if(!speaking || i>=sentences.length){
+      if(btn) btn.style.display='none';
+      speaking=false;
+      return;
+    }
+    var u = new SpeechSynthesisUtterance(sentences[i]);
+    u.rate=0.95;
+    u.onend = function(){ i++; speakNext(); };
+    u.onerror = function(){ i++; speakNext(); };
+    window.speechSynthesis.speak(u);
+  }
+  speakNext();
+}
+function stopReading(){
+  speaking=false;
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  document.querySelectorAll('.stopbtn').forEach(function(b){b.style.display='none';});
+}
+
+/* ---------- Vocab popover ---------- */
+function showVocab(term,def){
+  var pop = document.getElementById('vocabPop');
+  pop.innerHTML = '<strong>'+term+':</strong> '+def+' <button style="float:right" onclick="document.getElementById(\'vocabPop\').style.display=\'none\'">close</button>';
+  pop.style.display='block';
+}
+</script>
+</body>
+</html>
